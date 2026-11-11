@@ -1,0 +1,13 @@
+**
+!services/
+!services/api/
+!services/api/target/
+!services/api/target/interfere-api.jar
+!apps/
+!apps/web/
+!apps/web/dist/
+!apps/web/dist/**
+!infra/
+!infra/docker/
+!infra/docker/*.Dockerfile
+!infra/docker/nginx.conf

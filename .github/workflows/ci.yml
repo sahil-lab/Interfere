@@ -1,0 +1,27 @@
+name: Interfere Phase 1 checks
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: interfere-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  local-skeleton:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run the same containerized local gate
+        shell: pwsh
+        run: ./scripts/dev.ps1 check
+      - name: Show project health
+        if: always()
+        run: docker compose -p interfere --env-file .env -f infra/docker/compose.yaml ps
+      - name: Stop only this project
+        if: always()
+        run: docker compose -p interfere --env-file .env -f infra/docker/compose.yaml stop

@@ -1,0 +1,179 @@
+openapi: 3.0.3
+info:
+  title: Interfere Phase 1 skeleton
+  version: 0.1.0
+  description: >-
+    Independent loopback-only prototype. Synthetic, read-only checks only.
+    No telemetry, incident, reproduction, or patch API is implemented.
+servers:
+  - url: /
+paths:
+  /api/skeleton/status:
+    get:
+      operationId: getSkeletonStatus
+      summary: Read the migration-owned synthetic fixture from PostgreSQL
+      responses:
+        '200':
+          description: The real database fixture was read
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkeletonStatus'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/skeleton/check:
+    post:
+      operationId: checkSyntheticFixture
+      summary: Validate a synthetic request and read the database without mutation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [fixtureId]
+              properties:
+                fixtureId:
+                  type: string
+                  enum: [synthetic-demo]
+                  minLength: 1
+                  maxLength: 64
+      responses:
+        '200':
+          description: Validation and the database read succeeded
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkeletonStatus'
+        '400':
+          description: Missing, malformed, unknown, or non-allowlisted input
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '415':
+          description: Unsupported content type
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /actuator/health/liveness:
+    get:
+      operationId: getLiveness
+      summary: Check process liveness independently of PostgreSQL
+      responses:
+        '200':
+          $ref: '#/components/responses/Healthy'
+        '503':
+          $ref: '#/components/responses/Unhealthy'
+  /actuator/health/readiness:
+    get:
+      operationId: getReadiness
+      summary: Check application and PostgreSQL readiness
+      responses:
+        '200':
+          $ref: '#/components/responses/Healthy'
+        '503':
+          $ref: '#/components/responses/Unhealthy'
+components:
+  headers:
+    RequestId:
+      description: Server-generated correlation ID; caller-supplied values are ignored
+      schema:
+        type: string
+        format: uuid
+  responses:
+    Unavailable:
+      description: PostgreSQL or the synthetic fixture is unavailable
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/RequestId'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    Healthy:
+      description: Healthy without internal details
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status]
+            properties:
+              status:
+                type: string
+                enum: [UP]
+    Unhealthy:
+      description: Unhealthy without internal details
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [status]
+            properties:
+              status:
+                type: string
+                enum: [DOWN, OUT_OF_SERVICE]
+  schemas:
+    SkeletonStatus:
+      type: object
+      additionalProperties: false
+      required:
+        [
+          project,
+          phase,
+          fixtureId,
+          database,
+          telemetryEnabled,
+          patchAutomationEnabled,
+        ]
+      properties:
+        project:
+          type: string
+          enum: [Interfere]
+        phase:
+          type: integer
+          enum: [1]
+        fixtureId:
+          type: string
+          enum: [synthetic-demo]
+        database:
+          type: string
+          enum: [ready]
+        telemetryEnabled:
+          type: boolean
+          enum: [false]
+        patchAutomationEnabled:
+          type: boolean
+          enum: [false]
+    Problem:
+      type: object
+      required: [type, title, status, detail, instance, requestId]
+      properties:
+        type:
+          type: string
+          format: uri
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri
+        requestId:
+          type: string
+          format: uuid

@@ -1,0 +1,206 @@
+name: interfere
+
+x-bounded: &bounded
+  pids_limit: 128
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: local
+    options:
+      max-size: '5m'
+      max-file: '2'
+
+services:
+  db:
+    <<: *bounded
+    image: postgres:17-alpine
+    cpus: 0.5
+    mem_limit: 256m
+    read_only: true
+    environment:
+      POSTGRES_DB: interfere
+      POSTGRES_USER: interfere
+      POSTGRES_PASSWORD: ${INTERFERE_DB_PASSWORD:?Initialize the local environment first}
+    command:
+      - postgres
+      - -c
+      - shared_buffers=32MB
+      - -c
+      - max_connections=20
+      - -c
+      - work_mem=2MB
+      - -c
+      - maintenance_work_mem=32MB
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    tmpfs:
+      - /tmp:size=16m
+      - /var/run/postgresql:size=8m
+    networks: [local]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB']
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+
+  api:
+    <<: *bounded
+    image: interfere-api:local
+    build:
+      context: ../..
+      dockerfile: infra/docker/api.Dockerfile
+    cpus: 0.75
+    mem_limit: 512m
+    read_only: true
+    cap_drop: [ALL]
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/interfere?connectTimeout=3&socketTimeout=5
+      DB_USER: interfere
+      DB_PASSWORD: ${INTERFERE_DB_PASSWORD:?Initialize the local environment first}
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=60 -XX:ActiveProcessorCount=1 -Djava.io.tmpdir=/tmp
+    tmpfs:
+      - /tmp:size=32m,uid=10001,gid=10001
+    networks: [local, edge]
+    ports:
+      - '127.0.0.1:18206:8080'
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'wget',
+          '-q',
+          '-O',
+          '/dev/null',
+          'http://127.0.0.1:8080/actuator/health/readiness',
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 18
+      start_period: 30s
+    stop_grace_period: 15s
+
+  web:
+    <<: *bounded
+    image: interfere-web:local
+    build:
+      context: ../..
+      dockerfile: infra/docker/web.Dockerfile
+    cpus: 0.25
+    mem_limit: 64m
+    read_only: true
+    cap_drop: [ALL]
+    tmpfs:
+      - /tmp:size=16m,uid=101,gid=101
+    networks: [edge]
+    ports:
+      - '127.0.0.1:18106:8080'
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'wget',
+          '-q',
+          '-O',
+          '/dev/null',
+          'http://127.0.0.1:8080/healthz',
+        ]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  api-tools:
+    <<: *bounded
+    image: maven:3.9-eclipse-temurin-21
+    profiles: [tools]
+    cpus: 1
+    mem_limit: 1024m
+    working_dir: /workspace
+    environment:
+      MAVEN_OPTS: -Xmx384m -XX:ActiveProcessorCount=1
+    volumes:
+      - ../..:/workspace
+      - maven-cache:/root/.m2
+    networks: [tooling]
+    command: ['mvn', '--version']
+
+  web-tools:
+    <<: *bounded
+    image: node:24-bookworm-slim
+    profiles: [tools]
+    cpus: 1
+    mem_limit: 768m
+    working_dir: /workspace
+    environment:
+      NODE_OPTIONS: --max-old-space-size=512
+    volumes:
+      - ../..:/workspace
+      - npm-cache:/root/.npm
+    networks: [tooling]
+    command: ['node', '--version']
+
+  smoke:
+    <<: *bounded
+    image: node:24-bookworm-slim
+    profiles: [tools]
+    cpus: 0.25
+    mem_limit: 128m
+    working_dir: /workspace
+    user: node
+    read_only: true
+    cap_drop: [ALL]
+    environment:
+      WEB_BASE_URL: http://web:8080
+      API_BASE_URL: http://api:8080
+    volumes:
+      - ../..:/workspace:ro
+    networks: [edge]
+    command:
+      ['node', '--test', '--test-concurrency=1', 'tests/e2e/smoke.test.mjs']
+
+  browser:
+    <<: *bounded
+    image: mcr.microsoft.com/playwright:v1.65.0-noble
+    profiles: [tools]
+    cpus: 1
+    mem_limit: 768m
+    pids_limit: 256
+    working_dir: /workspace
+    user: pwuser
+    read_only: true
+    cap_drop: [ALL]
+    environment:
+      WEB_BASE_URL: http://web:8080
+      HOME: /tmp
+      XDG_CONFIG_HOME: /tmp/config
+      XDG_CACHE_HOME: /tmp/cache
+    volumes:
+      - ../../playwright.config.mjs:/workspace/playwright.config.mjs:ro
+      - ../../tests/e2e:/workspace/tests/e2e:ro
+      - ../../node_modules:/workspace/node_modules:ro
+    tmpfs:
+      - /tmp:size=256m,uid=1000,gid=1000
+    networks: [edge]
+    command:
+      [
+        './node_modules/.bin/playwright',
+        'test',
+        '--output=/tmp/interfere-browser-results',
+      ]
+
+networks:
+  local:
+    internal: true
+  edge:
+  tooling:
+
+volumes:
+  postgres-data:
+  maven-cache:
+  npm-cache:

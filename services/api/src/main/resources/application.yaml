@@ -1,0 +1,61 @@
+spring:
+  application:
+    name: interfere-api
+  main:
+    banner-mode: 'off'
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 4
+      minimum-idle: 1
+      connection-timeout: 2000
+  flyway:
+    enabled: true
+    clean-disabled: true
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+  mvc:
+    problemdetails:
+      enabled: true
+  servlet:
+    multipart:
+      enabled: false
+  lifecycle:
+    timeout-per-shutdown-phase: 10s
+
+server:
+  port: 8080
+  shutdown: graceful
+  max-http-request-header-size: 8KB
+  tomcat:
+    connection-timeout: 5s
+    threads:
+      max: 16
+      min-spare: 2
+  error:
+    include-message: never
+    include-stacktrace: never
+    include-binding-errors: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      show-components: never
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,db
+
+logging:
+  structured:
+    format:
+      console: ecs

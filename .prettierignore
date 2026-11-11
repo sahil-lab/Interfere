@@ -1,0 +1,9 @@
+node_modules
+apps/web/dist
+services/api/target
+coverage
+test-results
+playwright-report
+*.pdf
+.env
+package-lock.json

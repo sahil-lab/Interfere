@@ -232,3 +232,106 @@ Stop at the Phase 1 boundary. Await authorization for Phase 2: agree the domain
 contracts, permissions/consent model, idempotency, and observable state transitions
 before implementing the domain tables and APIs. Request Git initialization
 permission separately if repository operations become necessary.
+
+## 2026-11-12 - Editorial UI redesign
+
+### Scope and design
+
+The user requested a substantially more art-directed experience rather than
+another dashboard reskin. This is a **UI-only iteration**; it does not advance
+the engineering phases or implement a repair engine.
+
+- Replaced the neon card layout with a paper/ink/vermilion visual system,
+  oversized typography, an original identity mark, distinct narrative sections,
+  a focused proof console, native boundary disclosures, and a full-width footer.
+- Added an original procedural signal-loop sculpture: pointer response,
+  keyboard-operable interference slider, and pause/resume controls. It is
+  explicitly labeled artwork, not live telemetry.
+- Rendering is configured for at most 20 redraws/second and 1.5 device-pixel
+  ratio. Animation stops offscreen or in hidden tabs; reduced-motion preferences
+  start it paused. No WebGL/animation framework was added.
+- Self-hosted pinned Manrope and IBM Plex Mono fonts with their original SIL
+  Open Font Licenses distributed alongside the web app.
+- Preserved actual synthetic API checks, error/retry UX, contract examples,
+  configuration inspection, and deferred phase information.
+- Corrected the previous UI's success counter and fabricated fallback JSON:
+  the counter starts at zero, only validated responses count, and unavailable
+  responses remain explicitly unavailable. The eight-entry ledger records only
+  completed requests and is local to the current page.
+- Inspector tabs implement Left/Right/Home/End keyboard navigation and proper
+  tab/panel relationships. Configuration and input examples are explicitly
+  distinguished from live measurements and executed checks.
+
+### Commands and observed outcomes
+
+Commands ran from this project directory. npm and Chromium continued to use the
+existing bounded containers; no global runtimes were installed or replaced.
+
+```powershell
+docker compose --progress quiet -p interfere --env-file .env -f infra\docker\compose.yaml --profile tools run --rm --no-deps web-tools npm install --no-audit --no-fund
+docker compose --progress quiet -p interfere --env-file .env -f infra\docker\compose.yaml --profile tools run --rm --no-deps web-tools npm run format
+docker compose --progress quiet -p interfere --env-file .env -f infra\docker\compose.yaml --profile tools run --rm --no-deps web-tools npm run verify
+docker compose --progress quiet -p interfere --env-file .env -f infra\docker\compose.yaml build web
+.\scripts\dev.ps1 up
+docker compose --progress quiet -p interfere --env-file .env -f infra\docker\compose.yaml --profile tools run --rm --no-deps smoke
+docker compose --progress quiet -p interfere --env-file .env -f infra\docker\compose.yaml --profile tools run --rm --no-deps browser
+docker compose --progress quiet -p interfere --env-file .env -f infra\docker\compose.yaml --profile tools run --rm --no-deps browser ./node_modules/.bin/playwright test --grep 'signal artwork' --output=/tmp/interfere-browser-results
+```
+
+| Check                | Observed result                                                                                                                                                             |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Prettier             | Final source formatting check passed                                                                                                                                        |
+| Frontend unit tests  | 6/6 passed                                                                                                                                                                  |
+| TypeScript and Vite  | Strict typecheck and production build passed                                                                                                                                |
+| HTTP smoke           | 7/7 passed against actual web/API/PostgreSQL                                                                                                                                |
+| Chromium             | 5/5 passed: actual keyboard-initiated request, tab navigation, mobile failure/retry, initial failure honesty, reduced motion/art controls, and responsive geometry          |
+| Extended motion test | The existing artwork case was extended and rerun alone: 1/1 passed; actual canvas pixels change after resuming and remain stable when paused                                |
+| Responsive layout    | Document width did not exceed viewport width at 360, 390, 768, 1024, 1440, or 1920px                                                                                        |
+| Visual inspection    | Captured and inspected desktop hero, full composition, console, and mobile renders in local Chromium; final 1440px and 390px captures had matching viewport/document widths |
+| Fonts and CSP        | Both font families reported loaded; same-origin assets; successful-flow test observed no page/console errors and no external origins                                        |
+| Local services       | Web 18106/API 18206 and the DB-backed host proxy passed; database remains unpublished                                                                                       |
+
+The final Vite output reported 246.03 kB JavaScript (76.32 kB gzip) and 21.95 kB
+CSS (5.64 kB gzip), plus local font assets. These are observed artifact sizes,
+not a Lighthouse score, browser performance benchmark, or an award claim.
+
+### Failures fixed during this iteration
+
+1. The font package did not expose the assumed `latin.css` entry. Using its
+   full stylesheet then exposed a CSP-blocked inlined font. The final code
+   references the actual Latin WOFF2 asset explicitly, without loosening CSP.
+2. `crypto.randomUUID()` was unavailable on the browser container's plain-HTTP
+   `web` origin and crashed the ledger renderer. Replaced it with an in-memory
+   sequence for local React keys; this is not a replacement for server request
+   IDs or a cryptographic identifier.
+3. Decorative CSS guide-line transforms extended the mobile scroll area by
+   12-15px. Replaced them with bounded SVG geometry; did not hide page overflow
+   or clip meaningful content to make the test pass.
+4. Integrated-browser screenshots were unavailable and page handles expired.
+   Visual validation used the existing bounded Chromium container instead;
+   temporary captures stayed inside this project and were removed afterward.
+
+### Files changed in this UI iteration
+
+- Updated: `apps/web/src/App.tsx`, `apps/web/src/styles.css`,
+  `apps/web/src/main.tsx`, `apps/web/index.html`, `apps/web/package.json`,
+  `package-lock.json`, `tests/e2e/browser.spec.mjs`, `tests/e2e/smoke.test.mjs`,
+  `README.md`, and this execution record.
+- Added: `apps/web/src/SignalField.tsx`,
+  `apps/web/src/VerificationLab.tsx`, `apps/web/public/icon.svg`,
+  `apps/web/public/licenses/manrope.txt`, and
+  `apps/web/public/licenses/ibm-plex-mono.txt`.
+- Backend, API contract, migrations, Compose settings, and host tooling were
+  not changed. Java tests were not rerun for this frontend-only iteration;
+  the earlier Phase 1 results above remain historical evidence.
+
+No blocking UI failure remains in the tested scope. No cloud, real data, other
+project/session changes, Git initialization, commits, remotes, or pushes were
+performed. A full accessibility audit and production readiness are not claimed.
+The next step is design review of the running page; Phase 2 remains a separate
+authorization decision.
+
+Handoff observation: `Test-Path .git` returned `True` at the end of this UI
+iteration. This iteration did not run Git commands or create that metadata;
+it was left untouched. The earlier Phase 1 absence check above is historical,
+not a claim about the current directory.

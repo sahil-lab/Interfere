@@ -54,6 +54,23 @@ adds remotes, commits, pushes, or deploys to a cloud.
 
 ## Design and limitations
 
+The UI uses a paper/ink/vermilion editorial design with a locally rendered,
+interactive signal sculpture and a live proof console. The sculpture is
+illustrative artwork, **not telemetry**. Its slider never sends a request;
+animation pauses offscreen, in hidden tabs, and by default for reduced-motion
+preferences. A pause control is always available.
+
+The console displays only observed API results, browser-measured round-trip
+time, and an eight-entry in-memory session ledger. Failed or pending requests
+do not invent a response or increment verified reads. The keyboard-navigable
+inspector separates real responses from static contract examples and declared
+Compose settings. The latter are not live Docker metrics.
+
+Manrope and IBM Plex Mono are self-hosted through pinned Fontsource packages.
+No font CDN, analytics, animation framework, or external runtime service is
+used. Their SIL Open Font Licenses ship at `/licenses/manrope.txt` and
+`/licenses/ibm-plex-mono.txt`.
+
 - [Requirements and measurable acceptance criteria](docs/PRD.md)
 - [Architecture and implemented interfaces](docs/ARCHITECTURE.md)
 - [Threat model and approval boundaries](docs/THREAT_MODEL.md)

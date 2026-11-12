@@ -32,7 +32,7 @@ test('web serves the production entry, built assets, and security headers', asyn
   );
   assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
   const html = await response.text();
-  assert.match(html, /Interfere \| Local engineering skeleton/);
+  assert.match(html, /Interfere \| Less noise\. More proof\./);
   const script = html.match(/src="(\/assets\/[^"]+\.js)"/)?.[1];
   assert.ok(script, 'The HTML must reference a production JS bundle.');
   const asset = await request(web, script);

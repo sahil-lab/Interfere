@@ -4,6 +4,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
 Set-StrictMode -Version Latest
 $Root = Split-Path -Parent $PSScriptRoot
 $EnvFile = Join-Path $Root '.env'

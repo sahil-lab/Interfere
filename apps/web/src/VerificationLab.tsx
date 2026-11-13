@@ -6,6 +6,7 @@ import {
   type KeyboardEvent,
 } from 'react';
 import { fetchSkeleton, type SkeletonStatus } from './api';
+import { emitFault, emitPulse } from './field/store';
 
 type CheckState =
   | { kind: 'loading' | 'checking' }
@@ -62,6 +63,14 @@ const vectors = [
   },
 ] as const;
 
+const scopeStates = {
+  loading: 'Opening the local session',
+  checking: 'Check in flight',
+  ready: 'Standing by',
+  verified: 'Last check verified',
+  error: 'Last check failed',
+} as const;
+
 export default function VerificationLab() {
   const [state, setState] = useState<CheckState>({ kind: 'loading' });
   const [view, setView] = useState<View>('response');
@@ -81,6 +90,8 @@ export default function VerificationLab() {
       const durationMs = Math.round(performance.now() - started);
       setState({ kind: verify ? 'verified' : 'ready', data, durationMs });
       setVerifiedCount((count) => count + 1);
+      // The artwork only ever reacts to a check the visitor ran and its result.
+      if (verify) emitPulse();
       setLedger((entries) => [
         {
           id,
@@ -98,6 +109,7 @@ export default function VerificationLab() {
       const message =
         error instanceof Error ? error.message : 'The local check failed.';
       setState({ kind: 'error', message, durationMs });
+      if (verify) emitFault();
       setLedger((entries) => [
         {
           id,
@@ -152,46 +164,66 @@ export default function VerificationLab() {
   const duration = 'durationMs' in state ? state.durationMs : null;
 
   return (
-    <section
-      className="proof-section"
-      id="proof-lab"
-      aria-labelledby="proof-title"
-    >
-      <div className="page-width">
-        <div className="section-topline mono">
-          <span>02 / THE PROOF LAB</span>
+    <section className="lab" id="proof-lab" aria-labelledby="proof-title">
+      <div className="page">
+        <div className="section-top mono" data-reveal="fade">
+          <span>02 / The proof lab</span>
           <span>
-            <span className="square-mark" /> LOCAL-ONLY / SYNTHETIC DATA
+            <i className="pip" aria-hidden="true" />
+            Local-only / Synthetic data
           </span>
         </div>
-        <div className="proof-heading">
-          <h2 id="proof-title">
-            Real request.
-            <br />
-            <span>Real response.</span>
+        <div className="lab-head">
+          <h2 id="proof-title" data-reveal="lines">
+            <span className="line">
+              <span className="line-inner">Real request.</span>
+            </span>{' '}
+            <span className="line">
+              <span className="line-inner">
+                <em>Real</em> response.
+              </span>
+            </span>
           </h2>
-          <div className="proof-description">
+          <div className="lab-note" data-reveal="fade">
             <p>
               Not a recording. Not a mock dashboard. Send a validated request
               through the web, API, and database. See exactly what comes back.
             </p>
             <span className="mono">
-              READ-ONLY / SYNTHETIC FIXTURE / NO TELEMETRY
+              Read-only / Synthetic fixture / No telemetry
             </span>
           </div>
         </div>
 
-        <div className="proof-console">
-          <div className="console-titlebar mono">
+        <div className={`console is-${state.kind}`}>
+          <div className="console-bar mono">
             <span>
-              <span className="console-dot" /> INTERFERE / LOCAL SESSION
+              <i className="console-dot" aria-hidden="true" />
+              Interfere / Local session
             </span>
-            <span>PHASE 01</span>
+            <span>Phase 01</span>
           </div>
-          <div className="console-layout">
+
+          <div className="scope">
+            <div
+              className="scope-window"
+              data-field-anchor="2"
+              aria-hidden="true"
+            />
+            <p className="scope-state mono">
+              <i aria-hidden="true" />
+              {scopeStates[state.kind]}
+            </p>
+            <p className="scope-caption mono">
+              Fig. 03 / Scope. Generative art that reacts to completed checks.
+              Not a measurement.
+            </p>
+          </div>
+
+          <div className="console-grid">
             <div className="request-panel">
               <div className="request-heading">
-                <span className="mono">THE VERIFICATION PATH</span>
+                <span className="mono">The verification path</span>
                 <span
                   className={`connection-label ${data ? 'is-ready' : state.kind === 'error' ? 'is-error' : ''}`}
                 >
@@ -210,7 +242,7 @@ export default function VerificationLab() {
                     <h3>The interface</h3>
                     <p>React + TypeScript</p>
                   </div>
-                  <span className="path-meta mono">WEB</span>
+                  <span className="path-meta mono">Web</span>
                 </li>
                 <li>
                   <span className="path-symbol mono">02</span>
@@ -236,13 +268,13 @@ export default function VerificationLab() {
               </div>
               <button
                 type="button"
-                className="button-primary check-button"
+                className="check-button"
                 disabled={busy}
                 onClick={check}
               >
                 {busy ? 'Checking the connection...' : 'Run synthetic check'}
                 <span
-                  className={busy ? 'loading-mark' : 'check-arrow'}
+                  className={busy ? 'check-orb is-busy' : 'check-orb'}
                   aria-hidden="true"
                 >
                   {busy ? '+' : '\u2197'}
@@ -280,13 +312,17 @@ export default function VerificationLab() {
               </div>
               <dl className="request-metrics">
                 <div>
-                  <dt className="mono">VERIFIED READS</dt>
-                  <dd data-testid="verified-count">
+                  <dt className="mono">Verified reads</dt>
+                  <dd
+                    className="tick"
+                    key={verifiedCount}
+                    data-testid="verified-count"
+                  >
                     {String(verifiedCount).padStart(2, '0')}
                   </dd>
                 </div>
                 <div>
-                  <dt className="mono">BROWSER ROUND TRIP</dt>
+                  <dt className="mono">Browser round trip</dt>
                   <dd>
                     {duration === null ? '--' : duration}
                     <small> ms</small>
@@ -327,7 +363,7 @@ export default function VerificationLab() {
                 aria-labelledby="tab-response"
                 hidden={view !== 'response'}
                 tabIndex={0}
-                className="inspector-panel response-panel"
+                className="inspector-panel"
               >
                 <div className="inspector-caption mono">
                   <span>
@@ -336,7 +372,11 @@ export default function VerificationLab() {
                   <span>JSON / V1</span>
                 </div>
                 {data ? (
-                  <pre className="response-code" data-testid="response-json">
+                  <pre
+                    className="response-code"
+                    key={verifiedCount}
+                    data-testid="response-json"
+                  >
                     <code>{JSON.stringify(data, null, 2)}</code>
                   </pre>
                 ) : (
@@ -351,7 +391,7 @@ export default function VerificationLab() {
                   </div>
                 )}
                 <div className="query-note">
-                  <span className="mono">THE READ-ONLY QUERY</span>
+                  <span className="mono">The read-only query</span>
                   <code>
                     <span>SELECT</span> fixture_id
                     <br />
@@ -470,7 +510,7 @@ export default function VerificationLab() {
                   </div>
                   <div>
                     <dt>
-                      Database <span className="mono">INTERNAL</span>
+                      Database <span className="mono">Internal</span>
                     </dt>
                     <dd>256 MiB / 0.50 CPU</dd>
                   </div>
@@ -496,13 +536,13 @@ export default function VerificationLab() {
               </div>
             </div>
           </div>
-          <div className="console-bottom mono">
+          <div className="console-foot mono">
             <span>
-              <span aria-hidden="true">&#8627;</span> THE DATA IS SYNTHETIC. THE
-              CONNECTION IS REAL.
+              <span aria-hidden="true">&#8627;</span> The data is synthetic. The
+              connection is real.
             </span>
             <a href="/openapi.yaml">
-              OPENAPI CONTRACT <span aria-hidden="true">&#8599;</span>
+              OpenAPI contract <span aria-hidden="true">&#8599;</span>
             </a>
           </div>
         </div>

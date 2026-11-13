@@ -54,11 +54,38 @@ adds remotes, commits, pushes, or deploys to a cloud.
 
 ## Design and limitations
 
-The UI uses a paper/ink/vermilion editorial design with a locally rendered,
-interactive signal sculpture and a live proof console. The sculpture is
-illustrative artwork, **not telemetry**. Its slider never sends a request;
-animation pauses offscreen, in hidden tabs, and by default for reduced-motion
-preferences. A pause control is always available.
+The UI is a dark, scroll-driven page built around one generative WebGL field
+that follows the visitor down the page and re-forms for each chapter: a tangle
+(noise), a woven loop (signal), a waveform scope (evidence), and a fingerprint
+(human). It is drawn with raw WebGL in `apps/web/src/field`; there is no 3D or
+animation library and nothing is loaded from a CDN.
+
+The field is illustrative artwork, **not telemetry**, and is labeled as such
+on the page. Its idle motion is ambient and its slider never sends a request.
+The only events it responds to are the pointer, scrolling, and the result of
+a synthetic check the visitor ran: a verified response sends a wave through
+the scope, a failed one scatters it. It never shows a success that did not
+happen.
+
+- Motion can be paused with the control in the hero. `prefers-reduced-motion`
+  starts it paused, skips the opening sequence, unpins the scroll-driven
+  chapters, removes the custom cursor, and keeps the browser's own scrolling.
+- Detail adapts: sustained slow frames reduce points, strands, and resolution
+  once and never raise them again. Software-rendered WebGL gets a small
+  half-resolution field capped near 20 frames a second. Without WebGL the
+  page shows a static gradient and everything else still works.
+- `?field=full`, `?field=lite`, and `?field=off` override the automatic
+  choice. They change only the artwork.
+- The footer and the opening curtain are 99.6% opaque rather than solid.
+  Solid ones left part of the page unpainted in a Chromium that composites
+  without a GPU; D009 in the decisions record has the evidence and its limits.
+- The mouse wheel is eased in script; keyboard, touch, scrollbar, and in-page
+  links use native scrolling, and any key or pointer press ends a wheel
+  glide at once (D010).
+- Known issue, cause not found: in a software-rendered Chromium, the End key
+  was ignored roughly one press in six while the field was drawing. A second
+  press usually worked. It did not happen with the artwork off or still, and
+  it was not tested on a GPU.
 
 The console displays only observed API results, browser-measured round-trip
 time, and an eight-entry in-memory session ledger. Failed or pending requests
@@ -66,10 +93,15 @@ do not invent a response or increment verified reads. The keyboard-navigable
 inspector separates real responses from static contract examples and declared
 Compose settings. The latter are not live Docker metrics.
 
-Manrope and IBM Plex Mono are self-hosted through pinned Fontsource packages.
-No font CDN, analytics, animation framework, or external runtime service is
-used. Their SIL Open Font Licenses ship at `/licenses/manrope.txt` and
-`/licenses/ibm-plex-mono.txt`.
+Manrope, Instrument Serif, and IBM Plex Mono are self-hosted through pinned
+Fontsource packages. Their SIL Open Font Licenses ship at
+`/licenses/manrope.txt`, `/licenses/instrument-serif.txt`, and
+`/licenses/ibm-plex-mono.txt`. No analytics or external runtime service is
+used, and the Content Security Policy is unchanged.
+
+This is a visual design for a local prototype. It has not been submitted to,
+reviewed by, or recognised by any awards site, and no Lighthouse score or
+full accessibility audit is claimed.
 
 - [Requirements and measurable acceptance criteria](docs/PRD.md)
 - [Architecture and implemented interfaces](docs/ARCHITECTURE.md)
@@ -91,6 +123,8 @@ at least three) belong to later phases. No such result is claimed here.
 ## Troubleshooting
 
 - If Docker does not respond, start Docker Desktop in Linux-container mode.
+- The services have no restart policy, so they stay stopped after Windows or
+  Docker restarts. Start Docker Desktop, then run `.\scripts\dev.ps1 up`.
 - If ports 18106 or 18206 are occupied, stop here rather than changing or stopping
   another project's services.
 - A formatting failure is fixed with `.\scripts\dev.ps1 format`, then `check`.

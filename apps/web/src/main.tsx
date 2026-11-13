@@ -9,6 +9,11 @@ if (!root) {
   throw new Error('The application root element is missing.');
 }
 
+// Scroll reveals hide content first, so opt in only when motion is welcome.
+if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  document.documentElement.classList.add('has-reveal');
+}
+
 createRoot(root).render(
   <StrictMode>
     <App />

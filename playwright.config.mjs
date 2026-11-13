@@ -11,8 +11,9 @@ export default defineConfig({
   workers: 1,
   retries: 0,
   forbidOnly: true,
-  timeout: 20000,
-  expect: { timeout: 10000 },
+  // Software-rendered WebGL in the bounded test container is slow.
+  timeout: 40000,
+  expect: { timeout: 12000 },
   reporter: 'list',
   use: {
     baseURL,

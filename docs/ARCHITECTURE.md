@@ -25,7 +25,8 @@ usable host ports on the verified Docker Desktop version.
 
 ## Monorepo boundaries
 
-- `apps/web`: accessible dashboard, typed response validation, frontend tests.
+- `apps/web`: scroll-driven page, the WebGL field (`src/field`), the live proof
+  console, typed response validation, and frontend tests.
 - `services/api`: request validation, structured errors/logs, JDBC, Flyway, health.
 - `packages/contracts`: OpenAPI for the implemented skeleton.
 - `infra/docker`: Compose, runtime Dockerfiles, Nginx configuration.
